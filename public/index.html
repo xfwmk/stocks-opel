@@ -1,1 +1,369 @@
 
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#08090b">
+<title>Stocks — Opel</title>
+<style>
+:root {
+  --bg: #08090b;
+  --panel: #101216;
+  --panel2: #171a1f;
+  --border: #343740;
+  --text: #f4f5f7;
+  --muted: #858994;
+  --accent: #b7f36b;
+  --green: #54d98a;
+  --red: #ff777d;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font: 13px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+button { font: inherit; cursor: pointer; }
+#app { min-height: 100vh; padding: 28px clamp(16px,4vw,58px) 40px; }
+.shell { max-width: 1240px; margin: auto; }
+.topbar,.heading,.instrument-top,.bottom-note {
+  display: flex; justify-content: space-between; gap: 16px;
+}
+.topbar { align-items: center; margin-bottom: 42px; }
+.brand { display: flex; align-items: center; gap: 11px; font-size: 18px; font-weight: 800; }
+.brandmark {
+  width: 32px; height: 32px; display: grid; place-items: center;
+  background: var(--accent); color: #10150a; font-weight: 900;
+}
+.muted,.tickerline,.subheading { color: var(--muted); }
+.topmeta,.eyebrow,.market-chip,.tiny-label { font-size: 10px; letter-spacing: 1.5px; }
+.topmeta { color: var(--muted); }
+.live-dot { display: inline-block; width: 6px; height: 6px; background: var(--accent); margin-right: 8px; }
+.heading { align-items: end; margin-bottom: 24px; }
+.heading h1 { font-size: clamp(36px,5vw,52px); letter-spacing: -3px; margin: 10px 0; }
+.heading h1 span { color: var(--accent); }
+.eyebrow,.tiny-label { color: var(--muted); }
+.subheading { margin-top: 8px; font-size: 12px; }
+.market-chip { border: 1px solid #41454e; padding: 10px; white-space: nowrap; }
+.layout { display: grid; grid-template-columns: 280px minmax(0,1fr); gap: 18px; }
+.panel { background: var(--panel); border: 1px solid var(--border); }
+.watch-head { padding: 20px 18px 12px; display: flex; justify-content: space-between; }
+.watch-head h2 { font-size: 13px; margin: 0; }
+.asset-list { padding: 0 8px 8px; }
+.asset {
+  width: 100%; display: flex; align-items: center; gap: 10px;
+  text-align: left; padding: 13px 10px; margin: 2px 0;
+  color: var(--text); background: transparent; border: 1px solid transparent;
+}
+.asset:hover { background: #1b1e24; }
+.asset.active { background: #20242a; border-color: #555b66; box-shadow: inset 3px 0 var(--accent); }
+.asset-icon,.large-icon {
+  display: grid; place-items: center; flex-shrink: 0;
+  font-weight: 800; border: 1px solid #ffffff15;
+}
+.asset-icon { width: 35px; height: 35px; }
+.asset-copy { flex: 1; min-width: 0; }
+.asset-name { font-weight: 700; }
+.asset-ticker { color: var(--muted); font-size: 10px; margin-top: 5px; }
+.asset-price { text-align: right; font-size: 11px; }
+.asset-change { color: var(--green); font-size: 10px; margin-top: 5px; }
+.down { color: var(--red) !important; }
+.mainpanel { padding: clamp(18px,3vw,30px); min-width: 0; }
+.instrument-title { display: flex; align-items: center; gap: 12px; }
+.large-icon { width: 48px; height: 48px; font-size: 14px; }
+.instrument-title h2 { font-size: 19px; margin: 0; }
+.tickerline { font-size: 11px; margin-top: 6px; }
+.price-block { text-align: right; }
+.big-price { font-size: clamp(25px,4vw,38px); font-weight: 800; letter-spacing: -2px; }
+.change { color: var(--green); font-size: 11px; margin-top: 6px; }
+.chart-wrap { margin-top: 28px; position: relative; border-bottom: 1px solid #292c32; }
+.chart-svg { width: 100%; height: 260px; display: block; touch-action: pan-y; }
+.gridline { stroke: #2a2c32; stroke-dasharray: 3 6; }
+.axis-label { fill: #777b85; font-size: 10px; }
+.chart-tooltip {
+  display: none; position: absolute; pointer-events: none;
+  background: #191c21; border: 1px solid #555b66; padding: 8px;
+  transform: translate(-50%,-120%); white-space: nowrap; font-size: 11px;
+}
+.ranges {
+  display: flex; flex-wrap: wrap; gap: 2px; margin-top: 18px;
+  background: #171a1f; border: 1px solid var(--border); padding: 3px; width: max-content; max-width: 100%;
+}
+.range { border: 0; padding: 8px 12px; background: transparent; color: #9a9da6; }
+.range.active { background: var(--accent); color: #10150a; font-weight: 800; }
+.stats { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 10px; margin-top: 22px; }
+.stat { padding: 14px; background: var(--panel2); border: 1px solid var(--border); }
+.stat-label,.stat-note { color: var(--muted); font-size: 10px; }
+.stat-value { font-size: 15px; font-weight: 800; margin-top: 9px; overflow-wrap: anywhere; }
+.stat-note { margin-top: 5px; }
+.notice { margin-top: 16px; color: var(--muted); font-size: 10px; line-height: 1.7; }
+.bottom-note { margin-top: 24px; color: #777b85; font-size: 10px; flex-wrap: wrap; }
+@media(max-width:800px) {
+  #app { padding: 20px 14px 28px; }
+  .layout { grid-template-columns: 1fr; }
+  .asset-list { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); }
+  .heading { align-items: start; flex-direction: column; }
+  .market-chip { display: none; }
+  .mainpanel { padding: 18px; }
+  .chart-svg { height: 220px; }
+}
+@media(max-width:430px) {
+  .asset-list { grid-template-columns: 1fr; }
+  .stats { grid-template-columns: repeat(2,minmax(0,1fr)); }
+  .stats .stat:last-child { grid-column: span 2; }
+  .instrument-title h2 { font-size: 16px; }
+  .big-price { font-size: 25px; }
+  .topmeta { font-size: 9px; }
+}
+</style>
+</head>
+<body>
+<main id="app"><div class="shell">
+<header class="topbar">
+  <div class="brand"><div class="brandmark">O</div><span>opel <span class="muted">/ stocks</span></span></div>
+  <div class="topmeta"><span class="live-dot"></span> MARKET OVERVIEW · DEMO MODE</div>
+</header>
+
+<section class="heading">
+  <div>
+    <div class="eyebrow">Market intelligence / 01</div>
+    <h1>Stocks<span>_</span></h1>
+    <div class="subheading">Track the machines, chips and industrial giants moving markets.</div>
+  </div>
+  <div class="market-chip">OPL / MARKET TERMINAL</div>
+</section>
+
+<div class="layout">
+  <aside class="panel">
+    <div class="watch-head"><h2>Watchlist</h2><span class="tiny-label">06 ASSETS</span></div>
+    <div class="asset-list" id="assetList"></div>
+  </aside>
+
+  <section class="panel mainpanel">
+    <div class="instrument-top">
+      <div class="instrument-title">
+        <div class="large-icon" id="largeIcon"></div>
+        <div><h2 id="assetName">S&P 500</h2><div class="tickerline" id="ticker"></div></div>
+      </div>
+      <div class="price-block">
+        <div class="big-price" id="price"></div>
+        <div class="change" id="change"></div>
+      </div>
+    </div>
+    <div class="chart-wrap">
+      <svg id="chart" class="chart-svg" viewBox="0 0 800 260" preserveAspectRatio="none" role="img" aria-label="Illustrative price history"></svg>
+      <div class="chart-tooltip" id="tooltip"></div>
+    </div>
+    <div class="ranges" id="ranges">
+      <button class="range" data-range="1D">1D</button>
+      <button class="range" data-range="1W">1W</button>
+      <button class="range" data-range="1M">1M</button>
+      <button class="range active" data-range="6M">6M</button>
+      <button class="range" data-range="1Y">1Y</button>
+      <button class="range" data-range="5Y">5Y</button>
+      <button class="range" data-range="ALL">ALL</button>
+    </div>
+    <div class="stats">
+      <div class="stat"><div class="stat-label">PERIOD HIGH</div><div class="stat-value" id="high">—</div><div class="stat-note">Selected range</div></div>
+      <div class="stat"><div class="stat-label">PERIOD LOW</div><div class="stat-value" id="low">—</div><div class="stat-note">Selected range</div></div>
+      <div class="stat"><div class="stat-label">PERIOD CHANGE</div><div class="stat-value" id="periodChange">—</div><div class="stat-note" id="periodLabel"></div></div>
+    </div>
+    <div class="notice" id="notice">Illustrative sample values only — not live market data or investment advice.</div>
+  </section>
+</div>
+
+<footer class="bottom-note"><span>OPEL STOCKS / MARKET DASHBOARD</span><span>Illustrative prices · Not for trading</span></footer>
+</div></main>
+
+<script>
+const assets = [
+  {id:'spx',name:'S&P 500',ticker:'SPX · US INDEX',icon:'500',color:'#9da5b5',base:5842.47,change:1.24,seed:3,format:0},
+  {id:'nvda',name:'NVIDIA',ticker:'NVDA · NASDAQ',icon:'N',color:'#83d34c',base:142.87,change:2.82,seed:8,format:2},
+  {id:'aapl',name:'Apple',ticker:'AAPL · NASDAQ',icon:'A',color:'#c3c8d2',base:243.85,change:.67,seed:12,format:2},
+  {id:'qcom',name:'Qualcomm',ticker:'QCOM · NASDAQ',icon:'Q',color:'#65a8ff',base:168.42,change:-.48,seed:21,format:2},
+  {id:'ge',name:'GE Aerospace',ticker:'GE · NYSE',icon:'GE',color:'#79b8ff',base:201.34,change:1.18,seed:33,format:2},
+  {id:'ba',name:'Boeing',ticker:'BA · NYSE',icon:'B',color:'#ffb86b',base:184.26,change:-1.36,seed:41,format:2}
+];
+
+const ranges = {
+  '1D':{n:48,label:'Today'},
+  '1W':{n:56,label:'Last week'},
+  '1M':{n:60,label:'Last month'},
+  '6M':{n:72,label:'Last 6 months'},
+  '1Y':{n:80,label:'Last year'},
+  '5Y':{n:100,label:'Last 5 years'},
+  'ALL':{n:120,label:'All time (illustrative)'}
+};
+
+let selected = 'spx';
+let range = '6M';
+let series = [];
+const $ = id => document.getElementById(id);
+
+function randomValue(seed) {
+  const x = Math.sin(seed * 127.1 + 311.7) * 43758.5453;
+  return x - Math.floor(x);
+}
+
+function money(value, asset) {
+  return '$' + value.toLocaleString('en-US', {
+    minimumFractionDigits: asset.format,
+    maximumFractionDigits: asset.format
+  });
+}
+
+function buildSeries(asset) {
+  const count = ranges[range].n;
+  const values = [];
+  let value = 100;
+
+  for (let i = 0; i < count; i++) {
+    const wave = Math.sin(i * .23 + asset.seed) * .55 +
+      Math.cos(i * .075 + asset.seed) * .4;
+    const drift = (i / count) * (.12 + (asset.seed % 4) * .025);
+    value += wave + (randomValue(i + asset.seed) - .49) * 1.5 + drift;
+    values.push(value);
+  }
+
+  const last = values[values.length - 1];
+  return values.map(v => asset.base * v / last);
+}
+
+function renderList() {
+  $('assetList').innerHTML = assets.map(asset => `
+    <button class="asset ${selected === asset.id ? 'active' : ''}" data-id="${asset.id}">
+      <span class="asset-icon" style="background:${asset.color}22;color:${asset.color}">${asset.icon}</span>
+      <span class="asset-copy">
+        <div class="asset-name">${asset.name}</div>
+        <div class="asset-ticker">${asset.ticker}</div>
+      </span>
+      <span class="asset-price">${money(asset.base, asset)}
+        <div class="asset-change ${asset.change < 0 ? 'down' : ''}">${asset.change >= 0 ? '+' : ''}${asset.change.toFixed(2)}%</div>
+      </span>
+    </button>
+  `).join('');
+
+  document.querySelectorAll('.asset').forEach(button => {
+    button.addEventListener('click', () => {
+      selected = button.dataset.id;
+      render();
+    });
+  });
+}
+
+function render() {
+  const asset = assets.find(item => item.id === selected);
+  renderList();
+
+  $('largeIcon').textContent = asset.icon;
+  $('largeIcon').style.background = asset.color + '22';
+  $('largeIcon').style.color = asset.color;
+  $('assetName').textContent = asset.name;
+  $('ticker').textContent = asset.ticker;
+  $('notice').textContent =
+    'Illustrative sample values for interface preview only — not live market data or investment advice.';
+
+  series = buildSeries(asset);
+  const first = series[0];
+  const last = series[series.length - 1];
+  const pct = (last - first) / first * 100;
+
+  $('price').textContent = money(asset.base, asset);
+  $('change').textContent = `${asset.change >= 0 ? '+' : ''}${asset.change.toFixed(2)}% today`;
+  $('change').classList.toggle('down', asset.change < 0);
+  $('periodChange').textContent = `${pct >= 0 ? '+' : ''}${pct.toFixed(2)}%`;
+  $('periodChange').style.color = pct >= 0 ? 'var(--green)' : 'var(--red)';
+  $('periodLabel').textContent = ranges[range].label;
+  $('high').textContent = money(Math.max(...series), asset);
+  $('low').textContent = money(Math.min(...series), asset);
+
+  document.querySelectorAll('.range').forEach(button => {
+    button.classList.toggle('active', button.dataset.range === range);
+  });
+
+  drawChart(series, asset, pct >= 0);
+}
+
+function drawChart(values, asset, up) {
+  const svg = $('chart');
+  const W = 800, H = 260, L = 6, R = 6, T = 18, B = 25;
+  const innerW = W - L - R, innerH = H - T - B;
+  const min = Math.min(...values), max = Math.max(...values);
+  const pad = (max - min) * .13 || 1;
+  const low = min - pad, high = max + pad;
+
+  const points = values.map((value, i) => [
+    L + i * innerW / (values.length - 1),
+    T + (high - value) / (high - low) * innerH
+  ]);
+
+  const path = points.map((p, i) =>
+    `${i ? 'L' : 'M'}${p[0].toFixed(2)},${p[1].toFixed(2)}`
+  ).join(' ');
+
+  const area = path +
+    ` L ${points[points.length - 1][0]} ${T + innerH}` +
+    ` L ${points[0][0]} ${T + innerH} Z`;
+
+  const color = up ? '#54d98a' : '#ff777d';
+
+  svg.innerHTML = `
+    <defs>
+      <linearGradient id="fill" x1="0" x2="0" y1="0" y2="1">
+        <stop offset="0%" stop-color="${color}" stop-opacity=".24"/>
+        <stop offset="100%" stop-color="${color}" stop-opacity="0"/>
+      </linearGradient>
+    </defs>
+    ${[0,.25,.5,.75,1].map(t =>
+      `<line class="gridline" x1="${L}" y1="${T+t*innerH}" x2="${W-R}" y2="${T+t*innerH}"/>`
+    ).join('')}
+    <path d="${area}" fill="url(#fill)"/>
+    <path d="${path}" fill="none" stroke="${color}" stroke-width="2.5"
+      stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke"/>
+    <line id="crosshair" x1="0" y1="${T}" x2="0" y2="${T+innerH}" stroke="#a5a8b0" stroke-dasharray="3 4" opacity="0"/>
+    <circle id="dot" cx="0" cy="0" r="4" fill="${color}" stroke="#101216" stroke-width="2" opacity="0"/>
+    <text class="axis-label" x="${L}" y="${H-5}">${range === '1D' ? 'OPEN' : ranges[range].label.toUpperCase()}</text>
+    <text class="axis-label" text-anchor="end" x="${W-R}" y="${H-5}">LATEST</text>
+  `;
+
+  svg.onmousemove = event => {
+    const rect = svg.getBoundingClientRect();
+    const x = (event.clientX - rect.left) / rect.width * W;
+    const index = Math.max(0, Math.min(points.length - 1,
+      Math.round((x - L) / innerW * (points.length - 1))));
+    const point = points[index];
+
+    $('crosshair').setAttribute('x1', point[0]);
+    $('crosshair').setAttribute('x2', point[0]);
+    $('crosshair').setAttribute('opacity', '1');
+    $('dot').setAttribute('cx', point[0]);
+    $('dot').setAttribute('cy', point[1]);
+    $('dot').setAttribute('opacity', '1');
+
+    const tooltip = $('tooltip');
+    tooltip.style.display = 'block';
+    tooltip.style.left = point[0] / W * 100 + '%';
+    tooltip.style.top = point[1] / H * 100 + '%';
+    tooltip.textContent = money(values[index], asset);
+  };
+
+  svg.onmouseleave = () => {
+    $('crosshair').setAttribute('opacity', '0');
+    $('dot').setAttribute('opacity', '0');
+    $('tooltip').style.display = 'none';
+  };
+}
+
+document.querySelectorAll('.range').forEach(button => {
+  button.addEventListener('click', () => {
+    range = button.dataset.range;
+    render();
+  });
+});
+
+render();
+</script>
+</body>
+</html>
